@@ -11,7 +11,7 @@ def create_app() -> FastAPI:
     configure_logging()
 
     application = FastAPI(
-        title=settings.app_name,
+        title=settings.APP_NAME,
         version=__version__,
     )
 

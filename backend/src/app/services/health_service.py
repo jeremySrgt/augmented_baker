@@ -9,7 +9,7 @@ class HealthService:
     def check(self) -> HealthResponse:
         return HealthResponse(
             status="ok",
-            app=settings.app_name,
+            app=settings.APP_NAME,
             env=settings.app_env,
             version=__version__,
         )

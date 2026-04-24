@@ -18,6 +18,7 @@ Ideation:
     - ...
 - Description de la mission mentionne FastAPI, let's go sur ca 
 - logging local langsmith ? file system 
+- Utilisation de la nouvelle primitive SSE de fastAPI (release y a ~1,5 mois )
 
 
 Pour un poste Senior :
