@@ -17,12 +17,13 @@ Ideation:
     - A chaque début de conv, lancer un agents qui check les stocks
     - ...
 - Description de la mission mentionne FastAPI, let's go sur ca 
-- logging local langsmith ? file system 
+- logging local langsmith-like ? file system 
 - Utilisation de la nouvelle primitive SSE de fastAPI (release y a ~1,5 mois )
 
 
 Pour un poste Senior :
-- Utiliser le JS vs le python (vercel AI SDK vs une API first)
+- Utiliser le JS vs le python (vercel AI SDK vs une API python)
 - pour un poste de senior, les questions que j’aurais posés sont :
 - API model provider vs utiliser un model open source 
 - Gros model vs petit model
+- comment fonctionne le caching des tokens ?

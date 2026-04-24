@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from langchain.chat_models import init_chat_model
 
 from app.config import settings
+from app.prompts import SYSTEM_PROMPT
 
 
 class ChatService:
@@ -14,6 +15,10 @@ class ChatService:
         )
 
     async def stream(self, message: str) -> AsyncIterator[str]:
-        async for chunk in self._model.astream(message):
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": message},
+        ]
+        async for chunk in self._model.astream(messages):
             if chunk.text:
                 yield chunk.text
