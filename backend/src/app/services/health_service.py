@@ -6,10 +6,11 @@ from app.schemas.health import HealthResponse
 
 
 class HealthService:
-    def check(self) -> HealthResponse:
+    @staticmethod
+    def check() -> HealthResponse:
         return HealthResponse(
             status="ok",
             app=settings.APP_NAME,
-            env=settings.app_env,
+            env=settings.ENV,
             version=__version__,
         )

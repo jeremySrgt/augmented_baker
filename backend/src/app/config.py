@@ -17,5 +17,7 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "claude-sonnet-4-6"
     ANTHROPIC_API_KEY: SecretStr | None = None
 
+    NOTION_TOKEN: SecretStr | None = None
+
 
 settings = Settings()

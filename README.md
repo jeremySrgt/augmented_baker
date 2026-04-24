@@ -19,7 +19,9 @@ Ideation:
 - Description de la mission mentionne FastAPI, let's go sur ca 
 - logging local langsmith-like ? file system 
 - Utilisation de la nouvelle primitive SSE de fastAPI (release y a ~1,5 mois )
-
+- injection details system prompt (jour, heure, mini calendrier à venir pour palier l'arithmetique bug sur les dates) 
+- pas de séparation des directory par domain car petite app
+- fetch important infos et les mettres dans le context à chaque tour
 
 Pour un poste Senior :
 - Utiliser le JS vs le python (vercel AI SDK vs une API python)
@@ -27,3 +29,4 @@ Pour un poste Senior :
 - API model provider vs utiliser un model open source 
 - Gros model vs petit model
 - comment fonctionne le caching des tokens ?
+

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from app.core.dependencies import get_chat_service
-from app.schemas.chat import ChatRequest
+from app.schemas.chat import ChatRequest, TokenEvent, ToolCallEvent, ToolResultEvent
 from app.services.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,23 @@ async def stream_chat(
     service: ChatServiceDep,
 ) -> AsyncIterable[ServerSentEvent]:
     try:
-        async for chunk in service.stream(body.message):
-            yield ServerSentEvent(data={"content": chunk}, event="token")
+        async for event in service.stream(body.message):
+            if isinstance(event, TokenEvent):
+                yield ServerSentEvent(data={"content": event.content}, event="token")
+            elif isinstance(event, ToolCallEvent):
+                yield ServerSentEvent(
+                    data={"id": event.id, "name": event.name, "args": event.args},
+                    event="tool_call",
+                )
+            elif isinstance(event, ToolResultEvent):
+                yield ServerSentEvent(
+                    data={
+                        "id": event.id,
+                        "content": event.content,
+                        "is_error": event.is_error,
+                    },
+                    event="tool_result",
+                )
     except Exception:
         logger.exception("chat stream failed mid-flight")
         yield ServerSentEvent(data={"message": "stream failed"}, event="error")
