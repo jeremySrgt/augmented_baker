@@ -16,11 +16,23 @@ class OrderItem(BaseModel):
     ingredient: str = Field(min_length=1)
     quantity: float
     unit: str | None = None
+    unit_price: float | None = None
 
 
 def _format_item(item: OrderItem) -> str:
     unit = f" {item.unit}" if item.unit else ""
     return f"- {item.quantity}{unit} {item.ingredient}".rstrip()
+
+
+def _estimated_total(items: list[OrderItem]) -> float | None:
+    contributions = [
+        item.quantity * item.unit_price
+        for item in items
+        if item.unit_price is not None
+    ]
+    if not contributions:
+        return None
+    return round(sum(contributions), 2)
 
 
 def _draft_email(
@@ -54,7 +66,7 @@ def _build_row(
 ) -> dict[str, Any]:
     today = date.today().isoformat()
     items_text = "\n".join(_format_item(it) for it in items)
-    return {
+    row: dict[str, Any] = {
         "Référence commande": {
             "title": [{"text": {"content": f"Commande {supplier_name} - {today}"}}],
         },
@@ -65,6 +77,10 @@ def _build_row(
         "Statut": {"select": {"name": "Envoyée"}},
         "Notes": {"rich_text": [{"text": {"content": notes or ""}}]},
     }
+    total = _estimated_total(items)
+    if total is not None:
+        row["Montant estimé (€)"] = {"number": total}
+    return row
 
 
 def _apply_overrides(base: dict, overrides: dict | None) -> dict:
@@ -109,17 +125,23 @@ async def envoyer_commande_fournisseur(
     ou éditer (corriger une ligne, modifier une note). Sur validation, tu envoies le mail
     (faussement, pour l'instant — on log juste l'action) et tu écris la ligne dans Notion.
 
-    Avant d'appeler cet outil, tu DOIS avoir récupéré l'email du fournisseur via `stock_ingredients`
-    (l'email vit dans la propriété "Email fournisseur" sur chaque ligne d'ingrédient). Si tu n'as
-    pas l'email, demande-le à Madeleine ou regarde le stock.
+    Avant d'appeler cet outil, tu DOIS avoir récupéré via `stock_ingredients`, pour chaque
+    article à commander :
+      - l'email du fournisseur (propriété "Email fournisseur"),
+      - le prix unitaire (propriété "Prix unitaire (€)") — qu'on remonte dans `unit_price`
+        pour calculer le montant estimé de la commande.
+    Si tu n'as pas un de ces deux éléments, lis d'abord le stock — n'invente jamais un prix.
 
     Args:
         supplier_name: Le nom du fournisseur, choisi parmi la liste fixe (Minoterie Dupont,
             Laiterie du Midi, Sucrerie Méridionale, Œufs Fermiers Garcin, Levures Martin,
             Sel de Camargue).
         supplier_email: L'adresse mail du fournisseur (à récupérer via `stock_ingredients`).
-        items: La liste des articles à commander, chacun avec ingredient, quantity, et unit
-            optionnel (kg, L, unités, g).
+        items: La liste des articles à commander. Chaque article : `ingredient`, `quantity`,
+            `unit` optionnel (kg, L, unités, g), et `unit_price` optionnel (le prix unitaire
+            en € lu sur la ligne d'ingrédient correspondante dans `stock_ingredients`).
+            Si tu fournis `unit_price` pour tous les articles, le tool calcule le montant
+            estimé total et l'écrit dans la colonne "Montant estimé (€)" de Notion.
         notes: Précision libre à inclure dans le mail et dans la ligne Notion (urgence,
             créneau de livraison souhaité, etc.).
     """
