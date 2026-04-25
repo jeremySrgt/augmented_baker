@@ -22,11 +22,12 @@ Ideation:
 - injection details system prompt (jour, heure, mini calendrier à venir pour palier l'arithmetique bug sur les dates) 
 - pas de séparation des directory par domain car petite app
 - fetch important infos et les mettres dans le context à chaque tour
+  - pro-activité de l'agent: chaque démarrage de conv=context eng avec stock à sec ou bientot à sec -> ajout context -> Agent en capacité d'alerter avant qu'on pose la question 
 
-Pour un poste Senior :
-- Utiliser le JS vs le python (vercel AI SDK vs une API python)
-- pour un poste de senior, les questions que j’aurais posés sont :
+Pour un poste Senior, les questions que j’aurais posés sont : :
+- Utiliser le JS vs le python (vercel AI SDK vs une API python) 
 - API model provider vs utiliser un model open source 
 - Gros model vs petit model
 - comment fonctionne le caching des tokens ?
+- RAG vs Query vs injection
 

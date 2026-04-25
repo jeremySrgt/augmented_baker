@@ -3,7 +3,7 @@ from langchain.chat_models import init_chat_model
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import NOTION_TOOLS
+from app.agent.tools import AGENT_TOOLS
 from app.config import settings
 
 
@@ -15,7 +15,7 @@ def build_agent(checkpointer: BaseCheckpointSaver):
     )
     return create_agent(
         model,
-        tools=NOTION_TOOLS,
+        tools=AGENT_TOOLS,
         system_prompt=SYSTEM_PROMPT,
         checkpointer=checkpointer,
     )

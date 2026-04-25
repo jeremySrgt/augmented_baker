@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+/.idea
+
 # Distribution / packaging
 .Python
 build/
@@ -208,3 +210,5 @@ __marimo__/
 
 # Local app state (sqlite checkpointer for conversation memory)
 backend/data/
+/openspec/
+/.claude/

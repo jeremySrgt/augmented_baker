@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, isToolUIPart } from "ai";
+import {
+  DefaultChatTransport,
+  isToolUIPart,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  type UIMessage,
+} from "ai";
 import { Croissant } from "lucide-react";
 
 import {
@@ -23,6 +28,14 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import {
+  SupplierApprovalCard,
+  type SupplierApprovalDecision,
+  type SupplierApprovalEmail,
+  type SupplierApprovalRow,
+  type SupplierApprovalState,
+  type SupplierApprovalSupplier,
+} from "@/components/ai-elements/supplier-approval";
+import {
   Tool,
   ToolContent,
   ToolHeader,
@@ -30,10 +43,22 @@ import {
   ToolOutput,
 } from "@/components/ai-elements/tool";
 
+type SupplierApprovalData = {
+  toolCallId: string;
+  kind: string;
+  email: SupplierApprovalEmail | null;
+  notionRow: SupplierApprovalRow;
+  supplier: SupplierApprovalSupplier;
+};
+
+const SUPPLIER_ORDER_TOOL = "envoyer_commande_fournisseur";
+
 export default function ChatPage() {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status, error, clearError } = useChat({
+
+  const { messages, sendMessage, addToolApprovalResponse, status, error, clearError } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
 
   const handleSubmit = (message: PromptInputMessage) => {
@@ -43,6 +68,23 @@ export default function ChatPage() {
     sendMessage({ text });
     setInput("");
   };
+
+  const handleApprovalResponse = useCallback(
+    (toolCallId: string) => (decision: SupplierApprovalDecision) => {
+      if (decision.action === "approve") {
+        addToolApprovalResponse({ id: toolCallId, approved: true });
+      } else if (decision.action === "reject") {
+        addToolApprovalResponse({ id: toolCallId, approved: false });
+      } else {
+        addToolApprovalResponse({
+          id: toolCallId,
+          approved: true,
+          reason: JSON.stringify(decision.payload),
+        });
+      }
+    },
+    [addToolApprovalResponse],
+  );
 
   const submitStatus: "ready" | "streaming" | "error" =
     status === "streaming" || status === "submitted"
@@ -88,7 +130,27 @@ export default function ChatPage() {
                             </MessageResponse>
                           );
                         }
+                        if (part.type === "data-supplier-approval") {
+                          const data = (part as { data: SupplierApprovalData }).data;
+                          const cardState = approvalStateFromMessage(message, data.toolCallId);
+                          return (
+                            <SupplierApprovalCard
+                              key={key}
+                              toolCallId={data.toolCallId}
+                              supplier={data.supplier}
+                              email={data.email}
+                              notionRow={data.notionRow}
+                              state={cardState}
+                              onRespond={handleApprovalResponse(data.toolCallId)}
+                            />
+                          );
+                        }
                         if (isToolUIPart(part)) {
+                          // We render envoyer_commande_fournisseur as a card-only experience;
+                          // the generic Tool block here would just duplicate the header.
+                          const toolName =
+                            "toolName" in part ? part.toolName : part.type.replace(/^tool-/, "");
+                          if (toolName === SUPPLIER_ORDER_TOOL) return null;
                           return (
                             <Tool
                               key={key}
@@ -158,6 +220,32 @@ export default function ChatPage() {
       </div>
     </main>
   );
+}
+
+function approvalStateFromMessage(
+  message: UIMessage,
+  toolCallId: string,
+): SupplierApprovalState {
+  for (const part of message.parts) {
+    if (!isToolUIPart(part)) continue;
+    if (part.toolCallId !== toolCallId) continue;
+    if (part.state === "approval-responded" || part.state === "output-available") {
+      const approval = part.approval;
+      if (!approval) return { kind: "pending" };
+      if (!approval.approved) return { kind: "responded", action: "reject" };
+      return {
+        kind: "responded",
+        action: approval.reason ? "edit" : "approve",
+      };
+    }
+    if (part.state === "output-error" || part.state === "output-denied") {
+      const approval = part.approval;
+      if (approval && !approval.approved) {
+        return { kind: "responded", action: "reject" };
+      }
+    }
+  }
+  return { kind: "pending" };
 }
 
 function safeStringify(value: unknown): string {
