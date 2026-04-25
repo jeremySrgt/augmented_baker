@@ -3,14 +3,15 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from app.agent import build_agent
 from app.schemas.chat import ChatStreamEvent, TokenEvent, ToolCallEvent, ToolResultEvent
 
 
 class ChatService:
-    def __init__(self) -> None:
-        self._agent = build_agent()
+    def __init__(self, checkpointer: BaseCheckpointSaver) -> None:
+        self._agent = build_agent(checkpointer)
 
     @staticmethod
     def _decode_tool_content(content: Any) -> Any:
@@ -21,10 +22,13 @@ class ChatService:
                 return content
         return content
 
-    async def stream(self, message: str) -> AsyncIterator[ChatStreamEvent]:
+    async def stream(
+        self, message: str, conversation_id: str
+    ) -> AsyncIterator[ChatStreamEvent]:
         inputs = {"messages": [{"role": "user", "content": message}]}
+        config = {"configurable": {"thread_id": conversation_id}}
         async for mode, payload in self._agent.astream(
-            inputs, stream_mode=["messages", "updates"]
+            inputs, stream_mode=["messages", "updates"], config=config
         ):
             if mode == "messages":
                 chunk, _meta = payload

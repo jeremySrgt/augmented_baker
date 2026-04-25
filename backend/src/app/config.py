@@ -19,5 +19,7 @@ class Settings(BaseSettings):
 
     NOTION_TOKEN: SecretStr | None = None
 
+    MEMORY_DB_PATH: Path = _BACKEND_DIR / "data" / "conversations.sqlite"
+
 
 settings = Settings()

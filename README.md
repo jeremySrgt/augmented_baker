@@ -15,7 +15,7 @@ Ideation:
 - Pour l'envoi de mails, mettre Madeleine en copie
 - Tool libre idées:
     - A chaque début de conv, lancer un agents qui check les stocks
-    - ...
+    - Ecriture dans la mémoire persistante -> simple, fichier Markdown par exemple
 - Description de la mission mentionne FastAPI, let's go sur ca 
 - logging local langsmith-like ? file system 
 - Utilisation de la nouvelle primitive SSE de fastAPI (release y a ~1,5 mois )

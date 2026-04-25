@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import AsyncIterable
 from typing import Annotated
 
@@ -21,8 +22,9 @@ async def stream_chat(
     body: ChatRequest,
     service: ChatServiceDep,
 ) -> AsyncIterable[ServerSentEvent]:
+    conversation_id = body.conversation_id or str(uuid.uuid4())
     try:
-        async for event in service.stream(body.message):
+        async for event in service.stream(body.message, conversation_id):
             if isinstance(event, TokenEvent):
                 yield ServerSentEvent(data={"content": event.content}, event="token")
             elif isinstance(event, ToolCallEvent):
@@ -43,4 +45,4 @@ async def stream_chat(
         logger.exception("chat stream failed mid-flight")
         yield ServerSentEvent(data={"message": "stream failed"}, event="error")
         return
-    yield ServerSentEvent(data={}, event="done")
+    yield ServerSentEvent(data={"conversation_id": conversation_id}, event="done")

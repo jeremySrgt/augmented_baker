@@ -17,7 +17,7 @@ type BackendToolResultPayload = { id: string; content: unknown; is_error: boolea
 type BackendErrorPayload = { message?: string };
 
 export async function POST(req: Request): Promise<Response> {
-  let body: { messages?: UIMessage[] };
+  let body: { messages?: UIMessage[]; id?: string };
   try {
     body = await req.json();
   } catch {
@@ -29,12 +29,14 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "empty_message" }, { status: 400 });
   }
 
+  const conversationId = typeof body.id === "string" ? body.id : undefined;
+
   let upstream: Response;
   try {
     upstream = await fetch(`${BACKEND_URL}/v1/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify({ message: userText }),
+      body: JSON.stringify({ message: userText, conversation_id: conversationId }),
       signal: req.signal,
     });
   } catch (err) {
