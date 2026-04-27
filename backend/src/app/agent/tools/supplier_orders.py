@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Any, Literal, Annotated
+from typing import Annotated, Any, Literal
 
 from langchain.tools import tool
 from langgraph.types import interrupt
@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 from app.repositories.notion import NotionUnavailable, get_notion_repository
 from app.repositories.notion.databases import COMMANDES_FOURNISSEURS
+from app.repositories.smtp import EmailUnavailable
+from app.services.email_service import get_email_service
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +130,8 @@ async def envoyer_commande_fournisseur(
 
     Workflow : tu rédiges le mail, tu construis la ligne pour la base "Commandes Fournisseurs",
     puis tu **mets en pause** pour montrer le brouillon à Madeleine. Elle peut valider, refuser,
-    ou éditer (corriger une ligne, modifier une note). Sur validation, tu envoies le mail
-    (faussement, pour l'instant — on log juste l'action) et tu écris la ligne dans Notion.
+    ou éditer (corriger une ligne, modifier une note). Sur validation, tu envoies le mail via
+    SMTP, puis tu écris la ligne dans Notion.
 
     Avant d'appeler cet outil, tu DOIS avoir récupéré via `stock_ingredients`, pour chaque
     article à commander :
@@ -139,6 +141,7 @@ async def envoyer_commande_fournisseur(
     Si tu n'as pas un de ces deux éléments, lis d'abord le stock — n'invente jamais un prix.
     """
     repository = get_notion_repository()
+    email_service = get_email_service()
 
     email_draft = _draft_email(supplier_name, supplier_email, items, notes)
     row_draft = _build_row(supplier_name, supplier_email, items, notes)
@@ -182,18 +185,26 @@ async def envoyer_commande_fournisseur(
         }
 
     try:
-        page = await repository.create_page(COMMANDES_FOURNISSEURS, row_draft)
-    except NotionUnavailable as exc:
+        sent_to = email_service.send(
+            to=email_draft["to"],
+            subject=email_draft["subject"],
+            body=email_draft["body"],
+        )
+    except EmailUnavailable as exc:
         return {"error": exc.message}
 
-    logger.info(
-        "supplier order email -> %s: subject=%s; body_chars=%d",
-        email_draft["to"],
-        email_draft["subject"],
-        len(email_draft["body"]),
-    )
+    try:
+        page = await repository.create_page(COMMANDES_FOURNISSEURS, row_draft)
+    except NotionUnavailable as exc:
+        # Email already left — surface the partial state so Madeleine knows
+        # the supplier got the order but the bookkeeping row is missing.
+        return {
+            "status": "email_sent_notion_failed",
+            "sent_to": sent_to,
+            "error": exc.message,
+        }
 
-    return {"status": "sent", "order_id": page.get("id")}
+    return {"status": "sent", "order_id": page.get("id"), "sent_to": sent_to}
 
 
 SUPPLIER_ORDER_TOOLS = [envoyer_commande_fournisseur]

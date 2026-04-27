@@ -19,6 +19,15 @@ class Settings(BaseSettings):
 
     NOTION_TOKEN: SecretStr | None = None
 
+    SMTP_HOST: str
+    SMTP_PORT: int
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: SecretStr | None = None
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM: str = "Madeleine Croûton <madeleine@chez-madeleine.test>"
+    SMTP_DRY_RUN: bool = False
+    SMTP_REDIRECT_TO: str | None = None
+
     MEMORY_DB_PATH: Path = _BACKEND_DIR / "data" / "conversations.sqlite"
 
 
