@@ -2,7 +2,7 @@ from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
-from app.agent.middleware import stock_alert_briefing_middleware
+from app.agent.middleware import dynamic_briefing_middleware
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.tools import AGENT_TOOLS
 from app.config import settings
@@ -18,6 +18,6 @@ def build_agent(checkpointer: BaseCheckpointSaver):
         model,
         tools=AGENT_TOOLS,
         system_prompt=SYSTEM_PROMPT,
-        middleware=[stock_alert_briefing_middleware],
+        middleware=[dynamic_briefing_middleware],
         checkpointer=checkpointer,
     )

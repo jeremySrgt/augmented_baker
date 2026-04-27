@@ -73,8 +73,8 @@ async def build_stock_alert_briefing(repository: NotionRepository) -> str | None
         return None
 
     try:
-        sous: list[str] = []
-        proche: list[str] = []
+        under: list[str] = []
+        close: list[str] = []
         for row in rows:
             band = _classify(row)
             if band is None:
@@ -82,14 +82,14 @@ async def build_stock_alert_briefing(repository: NotionRepository) -> str | None
             line = _render_row(row)
             if line is None:
                 continue
-            (sous if band == "sous" else proche).append(line)
+            (under if band == "sous" else close).append(line)
 
-        if not sous and not proche:
+        if not under and not close:
             return None
 
-        sous.sort()
-        proche.sort()
-        return _render_section(sous, proche)
+        under.sort()
+        close.sort()
+        return _render_section(under, close)
     except Exception as exc:
         logger.warning("stock alert briefing render failed: %s", exc)
         return None

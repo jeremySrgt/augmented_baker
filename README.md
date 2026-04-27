@@ -1,3 +1,6 @@
+
+
+
 # augmented_baker
 Technical test for AI Sisters
 
@@ -21,6 +24,7 @@ Ideation:
 - Utilisation de la nouvelle primitive SSE de fastAPI (release y a ~1,5 mois )
 - injection details system prompt (jour, heure, mini calendrier à venir pour palier l'arithmetique bug sur les dates) 
 - pas de séparation des directory par domain car petite app
+- on pourrait envoyer des alertes dans le context quand on s'approche de période importante (buches de noel, galettes des rois, paques, ...)
 - fetch important infos et les mettres dans le context à chaque tour
   - pro-activité de l'agent: chaque démarrage de conv=context eng avec stock à sec ou bientot à sec -> ajout context -> Agent en capacité d'alerter avant qu'on pose la question 
 
