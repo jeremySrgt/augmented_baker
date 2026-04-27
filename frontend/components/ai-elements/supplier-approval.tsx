@@ -177,7 +177,7 @@ export function SupplierApprovalCard({
           {editing && !responded ? (
             <Textarea
               value={bodyDraft}
-              onChange={(e) => setBodyDraft(e.currentTarget.value)}
+              onChange={(e) => setBodyDraft(e.target.value)}
               className="mt-1 min-h-[180px] font-mono text-xs"
             />
           ) : (
@@ -210,7 +210,7 @@ export function SupplierApprovalCard({
           {editing && !responded ? (
             <Textarea
               value={notesDraft}
-              onChange={(e) => setNotesDraft(e.currentTarget.value)}
+              onChange={(e) => setNotesDraft(e.target.value)}
               placeholder="Notes (optionnel)"
               className="mt-1 min-h-[60px] text-xs"
             />

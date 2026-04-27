@@ -237,7 +237,7 @@ export default function ChatPage() {
                 <ConversationEmptyState
                   icon={<Croissant className="size-10" />}
                   title="Bonjour patronne"
-                  description="Pose-moi une question sur tes stocks, tes ventes ou tes commandes — ou envoie-moi une photo de ton rayon pour mettre à jour ton stock."
+                  description="Pose-moi une question sur tes stocks, tes ventes ou tes commandes, ou envoie-moi une photo de ton rayon pour mettre à jour ton stock."
                 />
               ) : (
                 messages.map((message) => {

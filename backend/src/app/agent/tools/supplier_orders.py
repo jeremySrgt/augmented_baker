@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Literal, Annotated
 
 from langchain.tools import tool
 from langgraph.types import interrupt
@@ -36,10 +36,10 @@ def _estimated_total(items: list[OrderItem]) -> float | None:
 
 
 def _draft_email(
-    supplier_name: str,
-    supplier_email: str,
-    items: list[OrderItem],
-    notes: str | None,
+        supplier_name: str,
+        supplier_email: str,
+        items: list[OrderItem],
+        notes: str | None,
 ) -> dict[str, str]:
     items_block = "\n".join(_format_item(it) for it in items)
     notes_block = f"\n\n{notes}" if notes else ""
@@ -59,10 +59,10 @@ def _draft_email(
 
 
 def _build_row(
-    supplier_name: str,
-    supplier_email: str,
-    items: list[OrderItem],
-    notes: str | None,
+        supplier_name: str,
+        supplier_email: str,
+        items: list[OrderItem],
+        notes: str | None,
 ) -> dict[str, Any]:
     today = date.today().isoformat()
     items_text = "\n".join(_format_item(it) for it in items)
@@ -90,11 +90,11 @@ def _apply_overrides(base: dict, overrides: dict | None) -> dict:
 
 
 def _row_with_overrides(
-    supplier_name: str,
-    supplier_email: str,
-    items: list[OrderItem],
-    notes: str | None,
-    row_overrides: dict | None,
+        supplier_name: str,
+        supplier_email: str,
+        items: list[OrderItem],
+        notes: str | None,
+        row_overrides: dict | None,
 ) -> dict[str, Any]:
     row = _build_row(supplier_name, supplier_email, items, notes)
     if not row_overrides:
@@ -113,10 +113,16 @@ def _row_with_overrides(
 
 @tool
 async def envoyer_commande_fournisseur(
-    supplier_name: str,
-    supplier_email: str,
-    items: list[OrderItem],
-    notes: str | None = None,
+        supplier_name: Annotated[str, "Le nom du fournisseur"],
+        supplier_email: Annotated[str, "L'adresse mail du fournisseur (à récupérer via `stock_ingredients`)"],
+        items: Annotated[list[
+            OrderItem], "La liste des articles à commander. Chaque article : `ingredient`, `quantity`,`unit`"
+                        "optionnel (kg, L, unités, g), et `unit_price` optionnel (le prix unitaire en € lu sur la"
+                        "ligne d'ingrédient correspondante dans `stock_ingredients`). Si tu fournis `unit_price`"
+                        "pour tous les articles, le tool calcule le montant estimé total et l'écrit dans la colonne"
+                        "'Montant estimé (€)' de Notion."],
+        notes: Annotated[str | None, "Précision libre à inclure dans le mail et dans la ligne Notion"
+                                     "(urgence, créneau de livraison souhaité, etc.)"] = None,
 ) -> dict[str, Any]:
     """Prépare et envoie une commande à un fournisseur, après l'aval explicite de Madeleine.
 
@@ -131,19 +137,6 @@ async def envoyer_commande_fournisseur(
       - le prix unitaire (propriété "Prix unitaire (€)") — qu'on remonte dans `unit_price`
         pour calculer le montant estimé de la commande.
     Si tu n'as pas un de ces deux éléments, lis d'abord le stock — n'invente jamais un prix.
-
-    Args:
-        supplier_name: Le nom du fournisseur, choisi parmi la liste fixe (Minoterie Dupont,
-            Laiterie du Midi, Sucrerie Méridionale, Œufs Fermiers Garcin, Levures Martin,
-            Sel de Camargue).
-        supplier_email: L'adresse mail du fournisseur (à récupérer via `stock_ingredients`).
-        items: La liste des articles à commander. Chaque article : `ingredient`, `quantity`,
-            `unit` optionnel (kg, L, unités, g), et `unit_price` optionnel (le prix unitaire
-            en € lu sur la ligne d'ingrédient correspondante dans `stock_ingredients`).
-            Si tu fournis `unit_price` pour tous les articles, le tool calcule le montant
-            estimé total et l'écrit dans la colonne "Montant estimé (€)" de Notion.
-        notes: Précision libre à inclure dans le mail et dans la ligne Notion (urgence,
-            créneau de livraison souhaité, etc.).
     """
     repository = get_notion_repository()
 

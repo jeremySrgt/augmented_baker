@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Annotated
 
 from langchain.tools import tool
 from langgraph.types import interrupt
@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class StockObservation(BaseModel):
-    ingredient: str = Field(min_length=1)
-    observed_quantity: float
-    unit: str | None = None
-    notes: str | None = None
+    ingredient: Annotated[
+        str, "le nom français, le plus proche possible du libellé Notion — ex: 'Beurre', 'Farine T65')"]
+    observed_quantity: Annotated[float, "le nombre estimé dans l'unité du stock)"]
+    unit: Annotated[
+        str | None, "Informatif, le tool écrit ta quantité dans la ligne correspondant, peu importe ce que tu mets ici"] = None
+    notes: Annotated[str | None, "Optionnel, par exemple 'presque vide' ou 'sac entamé'"] = None
 
 
 def _normalize(name: str) -> str:
@@ -23,7 +25,7 @@ def _normalize(name: str) -> str:
 
 
 def _match_observation(
-    observation: StockObservation, rows: list[dict]
+        observation: StockObservation, rows: list[dict]
 ) -> dict | None:
     obs_name = _normalize(observation.ingredient)
     if not obs_name:
@@ -43,7 +45,7 @@ def _match_observation(
 
 
 def _build_diff(
-    observations: list[StockObservation], rows: list[dict]
+        observations: list[StockObservation], rows: list[dict]
 ) -> tuple[list[dict], list[dict]]:
     matched: list[dict] = []
     unmatched: list[dict] = []
@@ -80,7 +82,7 @@ def _build_diff(
 
 
 def _apply_edit_overrides(
-    matched: list[dict], updates: list[dict]
+        matched: list[dict], updates: list[dict]
 ) -> list[dict]:
     override_map: dict[str, float] = {}
     for entry in updates:
@@ -103,7 +105,7 @@ def _apply_edit_overrides(
 
 @tool
 async def mettre_a_jour_stock_depuis_photo(
-    observations: list[StockObservation],
+        observations: Annotated[list[StockObservation], "La liste de ce que tu as vu sur la photo"],
 ) -> dict[str, Any]:
     """Met à jour la colonne "Quantité en stock" de la base "Stock Ingrédients"
     à partir des ingrédients que tu viens d'identifier sur une photo de rayon
@@ -122,15 +124,6 @@ async def mettre_a_jour_stock_depuis_photo(
     Les ingrédients que tu nommes mais qui n'existent pas dans la base seront
     juste signalés comme "Non reconnus" sur la carte — aucun écrit ne sera
     fait pour eux.
-
-    Args:
-        observations: La liste de ce que tu as vu sur la photo. Chaque entrée :
-            `ingredient` (le nom français, le plus proche possible du libellé
-            Notion — ex: "Beurre", "Farine T65"), `observed_quantity` (le nombre
-            estimé dans l'unité du stock), `unit` optionnel (informatif, l'outil
-            écrit ta quantité dans la ligne correspondante peu importe ce que tu
-            mets ici), et `notes` optionnel (par ex. "presque vide" ou "sac
-            entamé").
     """
     repository = get_notion_repository()
 

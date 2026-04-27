@@ -195,7 +195,7 @@ export function PantryStockApprovalCard({
                             min="0"
                             value={draft}
                             onChange={(e) => {
-                              const next = e.currentTarget.value;
+                              const next = e.target.value;
                               setDrafts((prev) => ({
                                 ...prev,
                                 [row.page_id]: next,
