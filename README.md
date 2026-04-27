@@ -28,6 +28,12 @@ SMTP_USERNAME=...
 SMTP_PASSWORD=...
 SMTP_USE_TLS=true
 SMTP_FROM='Madeleine Croûton <madeleine@chez-madeleine.test>'
+
+# Si besoin d'observabilité (pas obligatoire)
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
+LANGSMITH_API_KEY=...
+LANGSMITH_PROJECT=...
 ```
 
 ### Frontend
@@ -65,6 +71,9 @@ pour approuver les tools calls de Madeleine.
 
 C'est pratique mais personnellement je n'aime pas le format de stockage de langchain car impossible de lire
 l'historique de conversations nativement en SQL, on est obligé de passer par un script
+
+#### Langsmith
+Aucune config supplémentaire avec langchain, permet d'avoir de l'observabilité structuré pour debug
 
 ### Claude Sonnet
 Meilleur modèle actuellement pour des Agents IA sur les différents projet ou j'ai pu le tester. Le suivi des instructions
