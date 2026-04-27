@@ -57,6 +57,7 @@ async def _stream_events(
                         "email": event.email,
                         "notion_row": event.notion_row,
                         "supplier": event.supplier,
+                        "data": event.data,
                     },
                     event="interrupt",
                 )
@@ -77,7 +78,7 @@ async def stream_chat(
 ) -> AsyncIterable[ServerSentEvent]:
     conversation_id = body.conversation_id or str(uuid.uuid4())
     async for sse in _stream_events(
-        service.stream(body.message, conversation_id),
+        service.stream(body.message, conversation_id, images=body.images),
         conversation_id,
     ):
         yield sse

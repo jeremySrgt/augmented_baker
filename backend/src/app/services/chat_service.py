@@ -16,6 +16,41 @@ from app.schemas.chat import (
 )
 
 
+def _split_data_url(data_url: str) -> tuple[str, str]:
+    """Split a `data:<mime>;base64,<payload>` URL into (mime, payload).
+
+    Raises ValueError if the URL is malformed. Validation of mime/size happens
+    in the controller layer; this helper trusts its input has already passed.
+    """
+    if not data_url.startswith("data:"):
+        raise ValueError("not a data URL")
+    header, _, payload = data_url.partition(",")
+    if not payload:
+        raise ValueError("empty data URL payload")
+    meta = header[len("data:") :]
+    mime, _, encoding = meta.partition(";")
+    if encoding != "base64":
+        raise ValueError("only base64-encoded data URLs are supported")
+    return mime, payload
+
+
+def _build_user_content(message: str, images: list[str]) -> str | list[dict]:
+    if not images:
+        return message
+    parts: list[dict] = [{"type": "text", "text": message}]
+    for url in images:
+        mime, b64 = _split_data_url(url)
+        parts.append(
+            {
+                "type": "image",
+                "source_type": "base64",
+                "data": b64,
+                "mime_type": mime,
+            }
+        )
+    return parts
+
+
 class ChatService:
     def __init__(self, checkpointer: BaseCheckpointSaver) -> None:
         self._agent = build_agent(checkpointer)
@@ -58,6 +93,7 @@ class ChatService:
                             email=value.get("email"),
                             notion_row=value.get("notion_row"),
                             supplier=value.get("supplier"),
+                            data=value.get("data"),
                         )
                     continue
 
@@ -85,9 +121,13 @@ class ChatService:
                         )
 
     async def stream(
-        self, message: str, conversation_id: str
+        self,
+        message: str,
+        conversation_id: str,
+        images: list[str] | None = None,
     ) -> AsyncIterator[ChatStreamEvent]:
-        inputs = {"messages": [{"role": "user", "content": message}]}
+        content = _build_user_content(message, images or [])
+        inputs = {"messages": [{"role": "user", "content": content}]}
         config = {"configurable": {"thread_id": conversation_id}}
         astream = self._agent.astream(
             inputs, stream_mode=["messages", "updates"], config=config

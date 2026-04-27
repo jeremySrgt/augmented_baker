@@ -5,7 +5,11 @@ from notion_client.errors import HTTPResponseError, RequestTimeoutError
 
 from app.repositories.notion._flatten import flatten_page
 from app.repositories.notion.client import get_notion_client
-from app.repositories.notion.databases import COMMANDES_FOURNISSEURS, NotionDatabase
+from app.repositories.notion.databases import (
+    COMMANDES_FOURNISSEURS,
+    STOCK_INGREDIENTS,
+    NotionDatabase,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +78,33 @@ class NotionRepository:
         except (HTTPResponseError, RequestTimeoutError) as exc:
             logger.warning(
                 "notion transport error on %s create: %s",
+                database.name,
+                type(exc).__name__,
+            )
+            raise NotionUnavailable("Notion injoignable") from exc
+
+    async def update_page(
+        self,
+        database: NotionDatabase,
+        page_id: str,
+        properties: dict,
+    ) -> dict:
+        if database.database_id != STOCK_INGREDIENTS.database_id:
+            raise ValueError(
+                f"update_page is only allowed on {STOCK_INGREDIENTS.name}, "
+                f"got {database.name}"
+            )
+        try:
+            return await self._client.pages.update(
+                page_id=page_id,
+                properties=properties,
+            )
+        except APIResponseError as exc:
+            logger.warning("notion API error on %s update: %s", database.name, exc.code)
+            raise NotionUnavailable(f"Notion a refusé la requête ({exc.code})") from exc
+        except (HTTPResponseError, RequestTimeoutError) as exc:
+            logger.warning(
+                "notion transport error on %s update: %s",
                 database.name,
                 type(exc).__name__,
             )

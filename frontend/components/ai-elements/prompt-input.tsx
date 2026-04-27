@@ -420,17 +420,12 @@ export const PromptInputActionAddAttachments = ({
 }: PromptInputActionAddAttachmentsProps) => {
   const attachments = usePromptInputAttachments();
 
-  const handleSelect = useCallback(
-    (e: Event) => {
-      e.preventDefault();
-      attachments.openFileDialog();
-    },
-    [attachments]
-  );
+  const handleClick = useCallback(() => {
+    attachments.openFileDialog();
+  }, [attachments]);
 
   return (
-    // @ts-expect-error base-ui version drift: onSelect expects a wrapped BaseUIEvent
-    <DropdownMenuItem {...props} onSelect={handleSelect}>
+    <DropdownMenuItem {...props} onClick={handleClick}>
       <ImageIcon className="mr-2 size-4" /> {label}
     </DropdownMenuItem>
   );
@@ -444,15 +439,14 @@ export type PromptInputActionAddScreenshotProps = ComponentProps<
 
 export const PromptInputActionAddScreenshot = ({
   label = "Take screenshot",
-  onSelect,
+  onClick,
   ...props
 }: PromptInputActionAddScreenshotProps) => {
   const attachments = usePromptInputAttachments();
 
-  const handleSelect = useCallback(
-    async (event: Event) => {
-      // @ts-expect-error base-ui version drift: onSelect expects BaseUIEvent wrapper
-      onSelect?.(event);
+  const handleClick = useCallback(
+    async (event: Parameters<NonNullable<typeof onClick>>[0]) => {
+      onClick?.(event);
       if (event.defaultPrevented) {
         return;
       }
@@ -472,12 +466,11 @@ export const PromptInputActionAddScreenshot = ({
         throw error;
       }
     },
-    [onSelect, attachments]
+    [onClick, attachments]
   );
 
   return (
-    // @ts-expect-error base-ui version drift: onSelect expects a wrapped BaseUIEvent
-    <DropdownMenuItem {...props} onSelect={handleSelect}>
+    <DropdownMenuItem {...props} onClick={handleClick}>
       <Monitor className="mr-2 size-4" />
       {label}
     </DropdownMenuItem>

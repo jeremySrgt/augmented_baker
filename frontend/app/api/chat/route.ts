@@ -12,6 +12,8 @@ export const maxDuration = 60;
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 const SUPPLIER_ORDER_TOOL = "envoyer_commande_fournisseur";
+const PANTRY_PHOTO_TOOL = "mettre_a_jour_stock_depuis_photo";
+const APPROVAL_TOOLS = new Set([SUPPLIER_ORDER_TOOL, PANTRY_PHOTO_TOOL]);
 
 type BackendTokenPayload = { content: string };
 type BackendToolCallPayload = { id: string; name: string; args: Record<string, unknown> };
@@ -22,6 +24,7 @@ type BackendInterruptPayload = {
   email?: { to?: string; subject?: string; body?: string } | null;
   notion_row?: Record<string, unknown> | null;
   supplier?: { name?: string; email?: string } | null;
+  data?: Record<string, unknown> | null;
 };
 type BackendErrorPayload = { message?: string };
 
@@ -67,13 +70,18 @@ export async function POST(req: Request): Promise<Response> {
       });
     } else {
       const userText = extractLastUserText(messages);
-      if (!userText) {
+      const userImages = extractLastUserImages(messages);
+      if (!userText && userImages.length === 0) {
         return Response.json({ error: "empty_message" }, { status: 400 });
       }
       upstream = await fetch(`${BACKEND_URL}/v1/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify({ message: userText, conversation_id: conversationId }),
+        body: JSON.stringify({
+          message: userText || "(photo jointe)",
+          conversation_id: conversationId,
+          images: userImages,
+        }),
         signal: req.signal,
       });
     }
@@ -155,22 +163,46 @@ export async function POST(req: Request): Promise<Response> {
               const payload = safeParse<BackendInterruptPayload>(evt.data);
               if (!payload) break;
               closeText();
-              writer.write({
-                type: "tool-approval-request",
-                approvalId: payload.id,
-                toolCallId: payload.id,
-              } satisfies UIMessageChunk);
-              writer.write({
-                type: "data-supplier-approval",
-                id: payload.id,
-                data: {
+              if (payload.kind === "supplier_order_approval") {
+                writer.write({
+                  type: "tool-approval-request",
+                  approvalId: payload.id,
                   toolCallId: payload.id,
-                  kind: payload.kind,
-                  email: payload.email ?? null,
-                  notionRow: payload.notion_row ?? null,
-                  supplier: payload.supplier ?? null,
-                },
-              } as UIMessageChunk);
+                } satisfies UIMessageChunk);
+                writer.write({
+                  type: "data-supplier-approval",
+                  id: payload.id,
+                  data: {
+                    toolCallId: payload.id,
+                    kind: payload.kind,
+                    email: payload.email ?? null,
+                    notionRow: payload.notion_row ?? null,
+                    supplier: payload.supplier ?? null,
+                  },
+                } as UIMessageChunk);
+              } else if (payload.kind === "pantry_stock_approval") {
+                const data = (payload.data ?? {}) as {
+                  matched?: unknown;
+                  unmatched?: unknown;
+                };
+                writer.write({
+                  type: "tool-approval-request",
+                  approvalId: payload.id,
+                  toolCallId: payload.id,
+                } satisfies UIMessageChunk);
+                writer.write({
+                  type: "data-pantry-approval",
+                  id: payload.id,
+                  data: {
+                    toolCallId: payload.id,
+                    kind: payload.kind,
+                    matched: Array.isArray(data.matched) ? data.matched : [],
+                    unmatched: Array.isArray(data.unmatched) ? data.unmatched : [],
+                  },
+                } as UIMessageChunk);
+              } else {
+                console.warn("[api/chat] unknown interrupt kind:", payload.kind);
+              }
               break;
             }
             case "done": {
@@ -209,7 +241,7 @@ function findPendingApprovalResponse(messages: UIMessage[]): ApprovalResponse | 
   for (const part of last.parts) {
     if (!isToolUIPart(part)) continue;
     const toolName = "toolName" in part ? part.toolName : part.type.replace(/^tool-/, "");
-    if (toolName !== SUPPLIER_ORDER_TOOL) continue;
+    if (!APPROVAL_TOOLS.has(toolName)) continue;
     if (part.state !== "approval-responded") continue;
     const approval = part.approval;
     if (!approval) continue;
@@ -252,6 +284,21 @@ function extractLastUserText(messages: UIMessage[]): string {
     .map((p) => p.text)
     .join("")
     .trim();
+}
+
+function extractLastUserImages(messages: UIMessage[]): string[] {
+  const last = messages.at(-1);
+  if (!last || last.role !== "user") return [];
+  const images: string[] = [];
+  for (const part of last.parts) {
+    if (part.type !== "file") continue;
+    const file = part as { type: "file"; mediaType?: string; url?: string };
+    if (!file.mediaType?.startsWith("image/")) continue;
+    if (typeof file.url !== "string") continue;
+    if (!file.url.startsWith("data:")) continue;
+    images.push(file.url);
+  }
+  return images;
 }
 
 function safeParse<T>(raw: string): T | null {
